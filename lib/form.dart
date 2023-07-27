@@ -387,7 +387,7 @@ class _FormScreenState extends State<FormScreen> {
               Row(
                 children: [
                   ElevatedButton(
-                    onPressed: () => _consumerSignatureDate,
+                    onPressed: () => _consumerSignatureDate(context),
                     child: const Text('Date'),
                   ),
                   const SizedBox(width: 8),
