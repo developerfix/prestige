@@ -8,9 +8,125 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 //Local imports
 import 'mobile.dart';
 
-Future<void> generatePDF({
+Future<void> previewPDF({
   required String consumerName,
   required String employeeName,
+  required Map<String, TimeOfDay> startTimeWeek1,
+  required Map<String, TimeOfDay> endTimeWeek1,
+  required Map<String, DateTime?> week1Dates,
+  required Map<String, DateTime?> week2Dates,
+  required Map<String, int> tasksWeek1,
+  required Map<String, String> tasksCompletedWeek1,
+  required Map<String, TimeOfDay> startTimeWeek2,
+  required Map<String, TimeOfDay> endTimeWeek2,
+  required Map<String, int> tasksWeek2,
+  required Map<String, String> tasksCompletedWeek2,
+  required DateTime consumerSignatureDate,
+  required DateTime employeeSignatureDate,
+  required ByteData consumerSignimg,
+  required ByteData employeeSignimg,
+}) async {
+  int totalHoursOfWeek1 = 0;
+  int totalHoursOfWeek2 = 0;
+  tasksWeek1.forEach((key, value) {
+    totalHoursOfWeek1 += value;
+  });
+
+  tasksWeek2.forEach((key, value) {
+    totalHoursOfWeek2 += value;
+  });
+
+  //Create a PDF document.
+  final PdfDocument document = PdfDocument();
+  //Add page to the PDF
+  final PdfPage page = document.pages.add();
+  document.pageSettings.margins.all = 0;
+  //Get page client size
+  final Size pageSize = page.getClientSize();
+  //Draw rectangle
+  page.graphics.drawRectangle(
+      bounds: Rect.fromLTWH(0, 0, pageSize.width, pageSize.height),
+      pen: PdfPen(PdfColor(142, 170, 219)));
+  //Generate PDF grid.
+  final PdfGrid grid1 = getGrid1(
+      endTimeWeek1: endTimeWeek1,
+      endTimeWeek2: endTimeWeek2,
+      week1Dates: week1Dates,
+      week2Dates: week2Dates,
+      startTimeWeek1: startTimeWeek1,
+      startTimeWeek2: startTimeWeek2,
+      tasksCompletedWeek1: tasksCompletedWeek1,
+      tasksCompletedWeek2: tasksCompletedWeek2,
+      tasksWeek1: tasksWeek1,
+      tasksWeek2: tasksWeek2);
+  final PdfGrid grid2 = getGrid2(
+      endTimeWeek1: endTimeWeek1,
+      endTimeWeek2: endTimeWeek2,
+      week1Dates: week1Dates,
+      week2Dates: week2Dates,
+      startTimeWeek1: startTimeWeek1,
+      startTimeWeek2: startTimeWeek2,
+      tasksCompletedWeek1: tasksCompletedWeek1,
+      tasksCompletedWeek2: tasksCompletedWeek2,
+      tasksWeek1: tasksWeek1,
+      tasksWeek2: tasksWeek2);
+  //Draw the header section by creating text element
+  final PdfLayoutResult result = drawHeader(page, pageSize, grid1,
+      consumerName: consumerName, employeeName: employeeName);
+  //Draw grid
+
+  grid1.draw(
+      page: page, bounds: Rect.fromLTWH(0, result.bounds.top + 40, 0, 0));
+  grid2.draw(
+    page: page,
+    bounds: Rect.fromLTWH(0, result.bounds.bottom + 280, 0, 0),
+  )!;
+
+  page.graphics.drawString('TOTAL HOURS OF WEEK 1: ',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(100, result.bounds.bottom + 260, 0, 0));
+  page.graphics.drawString(
+      totalHoursOfWeek1.toString(),
+      // getTotalAmount(grid).toString(),
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(250, result.bounds.bottom + 260, 0, 0));
+  page.graphics.drawString('TOTAL HOURS OF WEEK 2: ',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(100, result.bounds.bottom + 525, 0, 0));
+  page.graphics.drawString(
+      totalHoursOfWeek2.toString(),
+      // getTotalAmount(grid).toString(),
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(250, result.bounds.bottom + 525, 0, 0));
+  page.graphics.drawString('TOTAL HOURS OF 2 WEEKS: ',
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(100, result.bounds.bottom + 535, 0, 0));
+  page.graphics.drawString(
+      (totalHoursOfWeek1 + totalHoursOfWeek2).toString(),
+      // getTotalAmount(grid).toString(),
+      PdfStandardFont(PdfFontFamily.helvetica, 9, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(250, result.bounds.bottom + 535, 0, 0));
+
+  //Add invoice footer
+  drawFooter(page, pageSize,
+      consumerSignatureDate: consumerSignatureDate,
+      consumerSignimg: consumerSignimg,
+      employeeSignatureDate: employeeSignatureDate,
+      employeeSignimg: employeeSignimg);
+  //Save the PDF document
+  final List<int> bytes = document.saveSync();
+  //Dispose the document.
+  document.dispose();
+
+  //Save and launch the file.
+  await saveAndLaunchFile(bytes, 'Home Care Form.pdf');
+}
+
+Future<String> getPDFPath({
+  required String consumerName,
+  required String employeeName,
+  required Map<String, DateTime?> week1Dates,
+  required Map<String, DateTime?> week2Dates,
   required Map<String, TimeOfDay> startTimeWeek1,
   required Map<String, TimeOfDay> endTimeWeek1,
   required Map<String, int> tasksWeek1,
@@ -50,6 +166,8 @@ Future<void> generatePDF({
       endTimeWeek1: endTimeWeek1,
       endTimeWeek2: endTimeWeek2,
       startTimeWeek1: startTimeWeek1,
+      week1Dates: week1Dates,
+      week2Dates: week2Dates,
       startTimeWeek2: startTimeWeek2,
       tasksCompletedWeek1: tasksCompletedWeek1,
       tasksCompletedWeek2: tasksCompletedWeek2,
@@ -59,6 +177,8 @@ Future<void> generatePDF({
       endTimeWeek1: endTimeWeek1,
       endTimeWeek2: endTimeWeek2,
       startTimeWeek1: startTimeWeek1,
+      week1Dates: week1Dates,
+      week2Dates: week2Dates,
       startTimeWeek2: startTimeWeek2,
       tasksCompletedWeek1: tasksCompletedWeek1,
       tasksCompletedWeek2: tasksCompletedWeek2,
@@ -111,8 +231,9 @@ Future<void> generatePDF({
   final List<int> bytes = document.saveSync();
   //Dispose the document.
   document.dispose();
+
   //Save and launch the file.
-  await saveAndLaunchFile(bytes, 'Home Care Form.pdf');
+  return await getPdfFilePath(bytes, 'Prestige Home Care Form.pdf');
 }
 
 // Draws the invoice header
@@ -237,6 +358,8 @@ CODE:    TASK:
 PdfGrid getGrid1({
   required Map<String, TimeOfDay> startTimeWeek1,
   required Map<String, TimeOfDay> endTimeWeek1,
+  required Map<String, DateTime?> week1Dates,
+  required Map<String, DateTime?> week2Dates,
   required Map<String, int> tasksWeek1,
   required Map<String, String> tasksCompletedWeek1,
   required Map<String, TimeOfDay> startTimeWeek2,
@@ -268,49 +391,49 @@ PdfGrid getGrid1({
   headerRow.cells[4].value = 'Tasks Completed (Use Codes Below)';
   //Add rows
   addProducts(
-      'SUNDAY',
+      'SUNDAY\n${DateFormat('d MMM, y').format(week1Dates['Sunday']!)}',
       formatTimeOfDay(startTimeWeek1['Sunday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Sunday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Sunday']}',
       '${tasksCompletedWeek1['Sunday']}',
       grid);
   addProducts(
-      'MONDAY',
+      'MONDAY\n${DateFormat('d MMM, y').format(week1Dates['Monday']!)}',
       formatTimeOfDay(startTimeWeek1['Monday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Monday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Monday']}',
       '${tasksCompletedWeek1['Monday']}',
       grid);
   addProducts(
-      'TUESDAY',
+      'TUESDAY\n${DateFormat('d MMM, y').format(week1Dates['Tuesday']!)}',
       formatTimeOfDay(startTimeWeek1['Tuesday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Tuesday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Tuesday']}',
       '${tasksCompletedWeek1['Tuesday']}',
       grid);
   addProducts(
-      'WEDNESDAY',
+      'WEDNESDAY\n${DateFormat('d MMM, y').format(week1Dates['Wednesday']!)}',
       formatTimeOfDay(startTimeWeek1['Wednesday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Wednesday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Wednesday']}',
       '${tasksCompletedWeek1['Wednesday']}',
       grid);
   addProducts(
-      'THURSDAY',
+      'THURSDAY\n${DateFormat('d MMM, y').format(week1Dates['Thursday']!)}',
       formatTimeOfDay(startTimeWeek1['Thursday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Thursday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Thursday']}',
       '${tasksCompletedWeek1['Thursday']}',
       grid);
   addProducts(
-      'FRIDAY',
+      'FRIDAY\n${DateFormat('d MMM, y').format(week1Dates['Friday']!)}',
       formatTimeOfDay(startTimeWeek1['Friday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Friday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Friday']}',
       '${tasksCompletedWeek1['Friday']}',
       grid);
   addProducts(
-      'SATURDAY',
+      'SATURDAY\n${DateFormat('d MMM, y').format(week1Dates['Saturday']!)}',
       formatTimeOfDay(startTimeWeek1['Saturday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek1['Saturday'] ?? TimeOfDay.now()),
       '${tasksWeek1['Saturday']}',
@@ -345,6 +468,8 @@ PdfGrid getGrid2({
   required Map<String, int> tasksWeek1,
   required Map<String, String> tasksCompletedWeek1,
   required Map<String, TimeOfDay> startTimeWeek2,
+  required Map<String, DateTime?> week1Dates,
+  required Map<String, DateTime?> week2Dates,
   required Map<String, TimeOfDay> endTimeWeek2,
   required Map<String, int> tasksWeek2,
   required Map<String, String> tasksCompletedWeek2,
@@ -373,49 +498,49 @@ PdfGrid getGrid2({
   headerRow.cells[4].value = 'Tasks Completed (Use Codes Below)';
   //Add rows
   addProducts(
-      'SUNDAY',
+      'SUNDAY\n${DateFormat('d MMM, y').format(week2Dates['Sunday']!)}',
       formatTimeOfDay(startTimeWeek2['Sunday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Sunday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Sunday']}',
       '${tasksCompletedWeek2['Sunday']}',
       grid);
   addProducts(
-      'MONDAY',
+      'MONDAY\n${DateFormat('d MMM, y').format(week2Dates['Monday']!)}',
       formatTimeOfDay(startTimeWeek2['Monday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Monday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Monday']}',
       '${tasksCompletedWeek2['Monday']}',
       grid);
   addProducts(
-      'TUESDAY',
+      'TUESDAY\n${DateFormat('d MMM, y').format(week2Dates['Tuesday']!)}',
       formatTimeOfDay(startTimeWeek2['Tuesday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Tuesday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Tuesday']}',
       '${tasksCompletedWeek2['Tuesday']}',
       grid);
   addProducts(
-      'WEDNESDAY',
+      'WEDNESDAY\n${DateFormat('d MMM, y').format(week2Dates['Wednesday']!)}',
       formatTimeOfDay(startTimeWeek2['Wednesday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Wednesday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Wednesday']}',
       '${tasksCompletedWeek2['Wednesday']}',
       grid);
   addProducts(
-      'THURSDAY',
+      'THURSDAY\n${DateFormat('d MMM, y').format(week2Dates['Thursday']!)}',
       formatTimeOfDay(startTimeWeek2['Thursday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Thursday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Thursday']}',
       '${tasksCompletedWeek2['Thursday']}',
       grid);
   addProducts(
-      'FRIDAY',
+      'FRIDAY\n${DateFormat('d MMM, y').format(week2Dates['Friday']!)}',
       formatTimeOfDay(startTimeWeek2['Friday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Friday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Friday']}',
       '${tasksCompletedWeek2['Friday']}',
       grid);
   addProducts(
-      'SATURDAY',
+      'SATURDAY\n${DateFormat('d MMM, y').format(week2Dates['Saturday']!)}',
       formatTimeOfDay(startTimeWeek2['Saturday'] ?? TimeOfDay.now()),
       formatTimeOfDay(endTimeWeek2['Saturday'] ?? TimeOfDay.now()),
       '${tasksWeek2['Saturday']}',
